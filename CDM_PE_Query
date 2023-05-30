@@ -1,0 +1,16 @@
+SELECT T1.person_id, T2.visit_occurrence_id,T1.pm_patient_number,t7.provider_name,t9.care_site_name,
+t3.procedure_category_abbr, t3.type_of_service_abbr, t8.zip, t1.gender_source_value, t6.payer_source_value,t8.city,								
+t8.state, t5.paid_patient_copay, t5.paid_patient_coinsurance,t4.condition_source_value,t3.procedure_source_value, 
+T3.quantity, T2.visit_start_date, t2.claim_number,t2.original_billing_date ,t5.date_paid,t5.total_charge,
+t5.total_paid, t5.amount_allowed, t5.paid_patient_deductible,t10.transaction_type,								
+t10.abbrevation, t10.Description, t10.self_pay_trans_cde 
+FROM cdm.person AS T1
+LEFT JOIN cdm.visit_occurrence AS T2 ON T1.person_id = T2.person_id
+LEFT join cdm.procedure_occurrence as T3 ON T2.visit_occurrence_id = T3.visit_occurrence_id 
+left join cdm.condition_occurrence as T4 on T2.visit_occurrence_id = T4.visit_occurrence_id
+left join cdm.cost as T5 on T2.visit_occurrence_id =T5.cost_event_id 
+left join cdm.payer_plan_period as T6 on T1.person_id = T6.person_id
+left join cdm.provider as T7 on T1.provider_id = T7.provider_id	
+left join cdm.location as T8 on t1.Location_id = t8. Location_id
+left join cdm.care_site as T9 on t8.Location_id = t9. Location_id
+LEFT JOIN cdm.p_ref_transaction_codes as T10 on t5.transaction_code_abbr = T10.abbrevation 
