@@ -58,8 +58,7 @@ def log_file(self):
 
 class PredictProcedure(APIView):
     """
-        This View takes two numbers as input and does addition of two numbers
-        and provides the sum as output
+        This View takes rule engine output and assigns payment scores to the procedure codes
     """
 
     def __init__(self):
