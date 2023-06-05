@@ -1,0 +1,19 @@
+Diabetic_Patient,Diagnosis_Code,Procedures_Description,Procedure_Code,Freq_Threshold_In_Days,Allergic_Or_Not,Depends_On_AIC_Col,Other_Condition,For_EPIC,For_HEDIS
+Diabetic,E08-E13,Ordering A1C,83036,90,,,,EPIC,
+Diabetic,E08-E13,A1C Level,83036,90,,,,EPIC,HEDIS
+Diabetic,E08-E13,Urinalysis,81002,180,,,,EPIC,
+Diabetic,E08-E13,Microalbumin w/ Creatinine,82570,180,,,,EPIC,
+Diabetic,E08-E13,CMP,80053,90,,,,EPIC,
+Diabetic,E08-E13,Lipid,80061,120,,,,EPIC,
+Diabetic,E08-E13,TSH,84443,180,,,,EPIC,
+Diabetic,E08-E13,CGM,95250,30,,,,EPIC,
+Diabetic,E08-E13,CGM OUTPATIENT WITH DIABETES MELLITUS,95251,30,,,,EPIC,
+Diabetic,E08-E13,Foot exam,2028F,365,,,,EPIC,
+Diabetic,E08-E13,Retinal eye exam,92250,365,,,,EPIC,HEDIS
+Diabetic,E08-E13,ABI,93922,365,,,,EPIC,
+Diabetic,E08-E13,ECG,93000,180,,,,EPIC,
+Diabetic,E08-E13,MICROALBUMIN URINE SEMIQUAN,82044,180,,,,EPIC,
+Diabetic,E08-E13,DILATED EYE EXAMINATION PERFORMED,2022F,365,,,,EPIC,
+Diabetic,E08-E13,STEREOSCOPIC RETINAL,2026F,365,,,,EPIC,
+Diabetic,R73.03,FRUCTOSAMINE,82985,14,,,,EPIC,
+Diabetic,R73.03,MiCROALBUMIN URINE QUANT,82043,180,,,,EPIC,
