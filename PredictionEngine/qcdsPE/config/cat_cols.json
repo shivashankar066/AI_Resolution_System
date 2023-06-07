@@ -1,0 +1,1 @@
+{"categorical_columns": ["Actual_Dr_Name", "Place_of_Service_Abbr", "Proc_Category_Abbr", "Type_of_Service_Abbr", "patient_zip_code", "patient_sex", "Original_Carrier_Name", "Patient_City", "Patient_State", "Primary_Diagnosis_Code", "Procedure_Code"]}
