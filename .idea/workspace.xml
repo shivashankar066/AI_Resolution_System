@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="a312af75-787f-4635-a31f-c3e64186a853" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/PredictionEngine/.idea/inspectionProfiles/Project_Default.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/.gitignore" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/PredictionEngine.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/PredictionEngine.iml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/inspectionProfiles/Project_Default.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/inspectionProfiles/Project_Default.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/inspectionProfiles/profiles_settings.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/inspectionProfiles/profiles_settings.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/PredictionEngine/.idea/PredictionEngine.iml" beforeDir="false" afterPath="$PROJECT_DIR$/PredictionEngine/.idea/PredictionEngine.iml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/PredictionEngine/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/PredictionEngine/__init__.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/PredictionEngine/asgi.py" beforeDir="false" afterPath="$PROJECT_DIR$/PredictionEngine/asgi.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/PredictionEngine/settings.py" beforeDir="false" afterPath="$PROJECT_DIR$/PredictionEngine/settings.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/PredictionEngine/urls.py" beforeDir="false" afterPath="$PROJECT_DIR$/PredictionEngine/urls.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/PredictionEngine/wsgi.py" beforeDir="false" afterPath="$PROJECT_DIR$/PredictionEngine/wsgi.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/manage.py" beforeDir="false" afterPath="$PROJECT_DIR$/manage.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/qcdsPE/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/qcdsPE/__init__.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/qcdsPE/admin.py" beforeDir="false" afterPath="$PROJECT_DIR$/qcdsPE/admin.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/qcdsPE/apps.py" beforeDir="false" afterPath="$PROJECT_DIR$/qcdsPE/apps.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/qcdsPE/config/cat_cols_list.json" beforeDir="false" afterPath="$PROJECT_DIR$/qcdsPE/config/cat_cols_list.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/qcdsPE/config/config.ini" beforeDir="false" afterPath="$PROJECT_DIR$/qcdsPE/config/config.ini" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/qcdsPE/config/cpt_allowed_dict.json" beforeDir="false" afterPath="$PROJECT_DIR$/qcdsPE/config/cpt_allowed_dict.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/qcdsPE/config/cpt_avg_allowed.json" beforeDir="false" afterPath="$PROJECT_DIR$/qcdsPE/config/cpt_avg_allowed.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/qcdsPE/config/label_encoder_Original_Carrier_Name.pkl" beforeDir="false" afterPath="$PROJECT_DIR$/qcdsPE/config/label_encoder_Original_Carrier_Name.pkl" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/qcdsPE/config/label_encoder_Patient_City.pkl" beforeDir="false" afterPath="$PROJECT_DIR$/qcdsPE/config/label_encoder_Patient_City.pkl" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/qcdsPE/config/label_encoder_Patient_State.pkl" beforeDir="false" afterPath="$PROJECT_DIR$/qcdsPE/config/label_encoder_Patient_State.pkl" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/qcdsPE/config/label_encoder_Proc_Category_Abbr.pkl" beforeDir="false" afterPath="$PROJECT_DIR$/qcdsPE/config/label_encoder_Proc_Category_Abbr.pkl" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/qcdsPE/config/label_encoder_Procedure_Code.pkl" beforeDir="false" afterPath="$PROJECT_DIR$/qcdsPE/config/label_encoder_Procedure_Code.pkl" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/qcdsPE/config/label_encoder_patient_sex.pkl" beforeDir="false" afterPath="$PROJECT_DIR$/qcdsPE/config/label_encoder_patient_sex.pkl" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/qcdsPE/config/label_encoder_patient_zip_code.pkl" beforeDir="false" afterPath="$PROJECT_DIR$/qcdsPE/config/label_encoder_patient_zip_code.pkl" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/qcdsPE/migrations/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/qcdsPE/migrations/__init__.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/qcdsPE/models.py" beforeDir="false" afterPath="$PROJECT_DIR$/qcdsPE/models.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/qcdsPE/tests.py" beforeDir="false" afterPath="$PROJECT_DIR$/qcdsPE/tests.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/qcdsPE/views.py" beforeDir="false" afterPath="$PROJECT_DIR$/qcdsPE/views.py" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="MarkdownSettingsMigration">
+    <option name="stateVersion" value="1" />
+  </component>
+  <component name="ProjectId" id="2QuyemRru14px4his2i4g6U9bdW" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "RunOnceActivity.OpenProjectViewOnStart": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true"
+  }
+}]]></component>
+  <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="a312af75-787f-4635-a31f-c3e64186a853" name="Changes" comment="" />
+      <created>1686217859721</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1686217859721</updated>
+    </task>
+    <servers />
+  </component>
+</project>
