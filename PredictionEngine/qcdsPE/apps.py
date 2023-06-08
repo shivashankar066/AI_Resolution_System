@@ -7,7 +7,7 @@ import os
 config = ConfigParser()
 config.read(os.path.join("qcdsPE", "config", "config.ini"))
 
-cat_cos_list = config['path']['cat_cos_list']
+cat_cos_list = config['path']['cat_cols_list']
 with open(cat_cos_list, 'r') as f:
     categorical_columns = json.load(f)['categorical_columns']
 
