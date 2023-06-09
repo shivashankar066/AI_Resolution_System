@@ -9,19 +9,15 @@ config.read(os.path.join("qcdsPE", "config", "config.ini"))
 
 cat_cos_list = config['path']['cat_cols_list']
 with open(cat_cos_list, 'r') as f:
-    categorical_columns = json.load(f)['categorical_columns']
+    categorical_columns = json.load(f)
 
-label_codes = {}
+label_encoders = {}
 for col in categorical_columns:
-    file_name = os.path.join('qcdsPE', 'config', 'label_encode_dict_{}.json'.format(col))
+    file_name = os.path.join('qcdsPE', 'config', 'label_encoder_{}.pkl'.format(col))
 
-    with open(file_name, 'r') as f:
-        code_dict = json.load(f)
-        # Get the list of keys
-        keys = list(code_dict.keys())
-        # Sort the keys with respect to values
-        sorted_keys = sorted(keys, key=lambda key: code_dict[key])
-        label_codes[col] = sorted_keys
+    with open(file_name, 'rb') as f:
+        encoder = pickle.load(f)
+        label_encoders[col] = encoder
 
 
 class QcdspeConfig(AppConfig):
@@ -30,7 +26,7 @@ class QcdspeConfig(AppConfig):
     name = 'qcdsPE'
 
     categorical_columns = categorical_columns
-    label_codes = label_codes
+    label_encoders = label_encoders
 
     cpt_allowed_dict_path = config['path']['cpt_allowed_dict']
     with open(cpt_allowed_dict_path, 'r') as f:
@@ -47,6 +43,7 @@ class QcdspeConfig(AppConfig):
     model_path = config['path']['model_path']
     with open(model_path, 'rb') as f:
         model = pickle.load(f)
+        model_fit_feature_order = model.feature_names_in_.tolist()
         model.verbose = False
         print('model loaded')
 
