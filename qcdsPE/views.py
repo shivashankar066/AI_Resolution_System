@@ -345,6 +345,10 @@ class PredictScore(APIView):
         cpts_in_patient_history = X.Procedure_Code.unique().tolist()
         missing_cpts = [cpt for cpt in rec_cpts if cpt not in cpts_in_patient_history]
 
+        # payer mapping
+        payer_mapping_dict = QcdspeConfig.payer_mapping['payer_mapping']
+        X = X.replace({"Original_Carrier_Name": payer_mapping_dict})
+
         for col in QcdspeConfig.categorical_columns:
             le = QcdspeConfig.label_encoders[col]
             try:
@@ -368,6 +372,19 @@ class PredictScore(APIView):
                             indx = le_classes_trimmed.index(missing_cls_trimmed)
                     if indx:
                         missing_indx_dict[missing_cls] = indx
+                    elif not indx:
+
+                        end = time()
+                        response = {
+                            "message": "Prediction Engine Service Failed.",
+                            "status": "Failed",
+                            "statusCode": 204,
+                            "respTime": round(end - start, 3),
+                            "patient_id": str(patient_id),
+                            "cause_of_error": ("class not found:",missing_classes)
+                        }
+
+                        return Response(response)
 
                 le_dict.update(missing_indx_dict)
 

@@ -37,6 +37,10 @@ class QcdspeConfig(AppConfig):
     with open(cpt_avg_allowed_path, 'r') as f:
         cpt_avg_allowed = json.load(f)
 
+    payer_mapping_path = config['path']['payer_mapping_path']
+    with open(payer_mapping_path, 'r') as f:
+        payer_mapping = json.load(f)
+
     most_frequent_payer = config['data']['most_frequent_payer']
 
     # Load the model

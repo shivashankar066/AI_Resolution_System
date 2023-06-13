@@ -1,0 +1,9 @@
+{
+  "payer_mapping": {
+    "Total Health/ Medicaid": "Priority Health Medicaid",
+    "Total Health Medicaid": "Priority Health Medicaid",
+    "Total Health Medicare": "Priority Health Medicare",
+    "Total Health/ Medicare": "Priority Health Medicaid",
+    "Total Health": "Priority Health"
+  }
+}
