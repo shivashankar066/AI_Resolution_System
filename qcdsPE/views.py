@@ -2,6 +2,7 @@ import pandas as pd
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from django.db import connection
+from django.conf import settings
 
 import numpy as np
 from configparser import ConfigParser
@@ -11,10 +12,19 @@ from datetime import date
 import warnings
 warnings.filterwarnings("ignore")
 
+import logging
+import os
+
 from .apps import QcdspeConfig
 
 config = ConfigParser()
 config.read("config/config.ini")
+
+
+for handler in logging.root.handlers[:]:
+    logging.root.removeHandler(handler)
+
+logging.basicConfig(filename=os.path.join(settings.LOG_DIR, settings.LOG_FILE), level=logging.INFO)
 
 
 def get_payer_allowed_value(row):
@@ -254,6 +264,7 @@ def get_patient_details(patient_id, allscripts=False):
     db_response = cursor.fetchall()
 
     result_df = pd.DataFrame([list(elem) for elem in db_response])
+    cursor.close()
 
     if result_df.empty:
         result_df = pd.DataFrame()
@@ -291,6 +302,9 @@ def get_age(dob):
 
 class PredictScore(APIView):
 
+    def __init__(self):
+        self.logger = logging.getLogger(__name__)
+
     def post(self, request):
 
         allscripts = False
@@ -299,26 +313,31 @@ class PredictScore(APIView):
         request_data = request.data
 
         patient_id = request_data['Patient_ID']
+
         rec_cpt_dict = request_data['Rule_Engine_Recommended_Code']
         rec_cpts = [k for k, v in rec_cpt_dict.items() if int(v) == 1]
 
+        self.logger.info("Predict Procedure Started for: " + str(patient_id))
         X = get_patient_details(patient_id, allscripts)
+        self.logger.info("patient Data fetched")
 
         if X.shape[0] == 0:
             response = handle_empty_patient_data(patient_id, rec_cpts, start)
+            self.logger.info("patient Data empty. Returning all ones as scores for recommended CPTs")
             return Response(response)
 
         X = X.drop_duplicates()
         # Missing value treatment
+        # For replacing missing payer values with most frequent payer in the past one year
         X['Original_Carrier_Name'] = X.Original_Carrier_Name.fillna(QcdspeConfig.most_frequent_payer)
+        # Filling coinsurance, copay and deductible with zeros
         X['CoInsurance'] = X.CoInsurance.fillna(0)
         X['CoPayment'] = X.CoPayment.fillna(0)
         X['Deductible'] = X.Deductible.fillna(0)
-
+        # Replacing allowed value with information from past data
         X['Allowed'] = X.apply(get_payer_allowed_value, axis=1)
 
         #calculate patient age based on DoB
-
         if 'patient_age' not in X.columns:
             X['DoB'] = pd.to_datetime(X['DoB'])
             X['patient_age'] = get_age(X['DoB'][0])
@@ -342,10 +361,16 @@ class PredictScore(APIView):
 
         X = X[X.Procedure_Code.isin(rec_cpts)]
 
+        if X.shape[0] == 0:
+            response = handle_empty_patient_data(patient_id, rec_cpts, start)
+            self.logger.info("None of the recommneded CPTs in patient history. "
+                             "Returning all ones as scores")
+            return Response(response)
+
         cpts_in_patient_history = X.Procedure_Code.unique().tolist()
         missing_cpts = [cpt for cpt in rec_cpts if cpt not in cpts_in_patient_history]
 
-        # payer mapping
+        # mapping to handle cases of payer name changes, acquisitions, and new payers
         payer_mapping_dict = QcdspeConfig.payer_mapping['payer_mapping']
         X = X.replace({"Original_Carrier_Name": payer_mapping_dict})
 
@@ -361,9 +386,12 @@ class PredictScore(APIView):
                 missing_indx_dict = {}
                 le_dict = {i: idx for idx, i in enumerate(le_classes)}
 
+                classes_to_replace = []
                 for missing_cls in missing_classes:
+
                     missing_cls_trimmed = missing_cls.strip()
                     indx = None
+
                     if missing_cls_trimmed in le_classes:
                         indx = le_classes.index(missing_cls_trimmed)
                     else:
@@ -373,20 +401,18 @@ class PredictScore(APIView):
                     if indx:
                         missing_indx_dict[missing_cls] = indx
                     elif not indx:
-
-                        end = time()
-                        response = {
-                            "message": "Prediction Engine Service Failed.",
-                            "status": "Failed",
-                            "statusCode": 204,
-                            "respTime": round(end - start, 3),
-                            "patient_id": str(patient_id),
-                            "cause_of_error": ("class not found:",missing_classes)
-                        }
-
-                        return Response(response)
+                        classes_to_replace.append(missing_cls)
 
                 le_dict.update(missing_indx_dict)
+
+                if classes_to_replace:
+                    self.logger.warning("New payer names found, which are not present at training time")
+                    self.logger.info("Missing classes in payer column are:")
+                    for c, missing_payer in enumerate(classes_to_replace):
+                        self.logger.info("---->{}: {}".format(c+1,missing_payer))
+                    frequent_payer_index = le_classes.index(QcdspeConfig.most_frequent_payer)
+                    replace_missing_dict = dict(zip(classes_to_replace,[frequent_payer_index]*len(classes_to_replace)))
+                    le_dict.update(replace_missing_dict)
 
                 X[col] = [le_dict[label] for label in X[col]]
 
@@ -398,13 +424,21 @@ class PredictScore(APIView):
         cpt_encoder = QcdspeConfig.label_encoders["Procedure_Code"]
         input_cpts = cpt_encoder.inverse_transform(input_cpts)
 
+        self.logger.info("pre processing complete")
+
         predictions = QcdspeConfig.model.predict(X)
+        self.logger.info("ml prediction complete")
 
         predictions_list = np.round(predictions, 3).tolist()
         output = dict(zip(input_cpts, predictions_list))
 
-        # Zero score to CPTs missing in patient history
-        output.update(dict(zip(missing_cpts, [0]*len(missing_cpts))))
+        # One score to CPTs missing in patient history
+        self.logger.info("Some of the recommended CPTs in patient history.")
+        self.logger.info("Missing CPTs are:")
+        self.logger.info(missing_cpts)
+        self.logger.info("Returning all ones as scores for these CPTs")
+
+        output.update(dict(zip(missing_cpts, [1.0]*len(missing_cpts))))
 
         sorted_output = dict(sorted(output.items(), key=lambda x: x[1], reverse=True))
         end = time()
