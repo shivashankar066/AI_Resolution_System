@@ -278,7 +278,8 @@ def get_patient_details(patient_id, allscripts=False):
 def handle_empty_patient_data(patient_id, rule_engine_recommended_code, start_time):
 
     pred_scores = [1.0] * len(rule_engine_recommended_code)
-    rec = {str(patient_id): dict(zip(rule_engine_recommended_code,pred_scores))}
+    proc_code = dict(zip(rule_engine_recommended_code,pred_scores))
+    rec = {str(patient_id): {"Proc_code":proc_code}}
 
     response = {
         "message": "Prediction Engine Service completed successfully.",
@@ -442,14 +443,14 @@ class PredictScore(APIView):
 
         sorted_output = dict(sorted(output.items(), key=lambda x: x[1], reverse=True))
         end = time()
-
+        rec = {str(patient_id): {"Proc_code":sorted_output}}
         response = {
             "message": "Prediction Engine Service completed successfully.",
             "status": "Success",
             "statusCode": 200,
             "respTime": round(end-start, 3),
             "patient_id": str(patient_id),
-            "recommended_code": str(sorted_output)
+            "recommended_code": str(rec)
         }
 
         return Response(response)
