@@ -88,7 +88,7 @@ def get_similar_patient_info(missing_cpts, current_carrier, patient_age, diagnos
     else:
         # If the patient data doesn't have carrier name at all
         # use historical data where same diag codes and cpt codes were used
-        result = pd.DataFrame() #"query db where Diagnosis_Code.isin(diagnosis_codes)
+        result = pd.DataFrame() # "query db where Diagnosis_Code.isin(diagnosis_codes)
 
         result_cpt = result[result.Procedure_Code.isin(missing_cpts)]
 
@@ -99,7 +99,7 @@ def get_similar_patient_info(missing_cpts, current_carrier, patient_age, diagnos
     # If there are missing CPTs in current carrier data, considering historical data for the CPTs irrespective of
     # carrier
     if len(missing_cpt_in_curr_carrier) > 0:
-        missing_cpt_result = pd.DataFrame() #"query db where Procedure_Code.isin(missing_cpt_in_curr_carrier)
+        missing_cpt_result = pd.DataFrame() # "query db where Procedure_Code.isin(missing_cpt_in_curr_carrier)
         result_cpt = pd.concat([result_cpt, missing_cpt_result], axis=0)
 
     # Calculate difference in age between the patient and those in the historical data
@@ -207,23 +207,24 @@ def get_patient_details(patient_id, allscripts=False):
 
         # cdm query
         query = """SELECT T1.person_id,T1.birth_datetime,
-        t3.procedure_category_abbr,  t8.zip, t1.gender_source_value, t6.payer_source_value,t8.city,
-        t8.state, t5.paid_patient_copay, t5.paid_patient_coinsurance,t4.condition_source_value,t3.procedure_source_value,
+        t3.procedure_category_abbr,  loc.zip, t1.gender_source_value, t6.payer_source_value,loc.city,
+        loc.state, t5.paid_patient_copay, t5.paid_patient_coinsurance,t4.condition_source_value,t3.procedure_source_value,
         T3.quantity, t5.total_charge,t5.amount_allowed, t5.paid_patient_deductible
-        FROM cdm.person AS T1
-        LEFT JOIN cdm.visit_occurrence AS T2 ON T1.person_id = T2.person_id
-        LEFT join cdm.procedure_occurrence as T3 ON T2.visit_occurrence_id = T3.visit_occurrence_id
-        left join cdm.condition_occurrence as T4 on T2.visit_occurrence_id = T4.visit_occurrence_id
-        left join cdm.cost as T5 on T2.visit_occurrence_id =T5.cost_event_id
+        From cdm.location AS loc 
+        LEFT JOIN cdm.person AS T1 ON loc.location_id =T1.location_id 
+        LEFT JOIN cdm.visit_detail AS T2 ON T1.person_id = T2.person_id
+        LEFT join cdm.procedure_occurrence as T3 ON T2.visit_detail_id= T3.visit_detail_id
+        left join cdm.condition_occurrence as T4 on T2.visit_detail_id = T4.visit_detail_id
+        left join cdm.cost as T5 on T2.visit_detail_id =T5.cost_event_id 
         left join cdm.payer_plan_period as T6 on T1.person_id = T6.person_id
-        left join cdm.provider as T7 on T2.provider_id = T7.provider_id
-        left join cdm.location as T8 on t1.Location_id = t8. Location_id
-        left join cdm.care_site as T9 on t8.Location_id = t9. Location_id
+        --left join cdm.provider as T7 on T2.provider_id = T7.provider_id
+        --left join cdm.location as T8 on t1.Location_id = t8. Location_id
+        --left join cdm.care_site as T9 on t8.Location_id = t9. Location_id
         LEFT JOIN cdm.p_ref_transaction_codes as T10 on t5.transaction_code_abbr = T10.abbrevation
         where (t10.self_pay_trans_cde=0)
         and (T10.Description not like '%%Self%%' And T10.Description not like '%%Adj%%')
         And (t10.transaction_type!='A') and (t10.transaction_type !='T') and (t10.transaction_type!='B')
-        and (T2.visit_occurrence_id > 0)  and ( t5.total_paid >= 0) and (t5.total_charge > 0)
+        and (T2.visit_detail_id > 0)  and ( t5.total_paid >= 0) and (t5.total_charge > 0)
         and ((T4.condition_source_value BETWEEN 'E08' AND 'E13')
             OR (T4.condition_source_value = 'R73.03'))
         and t1.person_id= %s """
@@ -337,7 +338,7 @@ class PredictScore(APIView):
         # Replacing allowed value with information from past data
         X['Allowed'] = X.apply(get_payer_allowed_value, axis=1)
 
-        #calculate patient age based on DoB
+        # calculate patient age based on DoB
         if 'patient_age' not in X.columns:
             X['DoB'] = pd.to_datetime(X['DoB'])
             X['patient_age'] = get_age(X['DoB'][0])
@@ -415,7 +416,6 @@ class PredictScore(APIView):
                     le_dict.update(replace_missing_dict)
 
                 X[col] = [le_dict[label] for label in X[col]]
-
 
         # Reorder input columns in line with their order at training time
         X = X[QcdspeConfig.model_fit_feature_order]
