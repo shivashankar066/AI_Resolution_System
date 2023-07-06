@@ -100,8 +100,8 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': 'qcds_mart',
-        'USER': 'postgres',
-        'PASSWORD': 'Qu@d!$2022',
+        'USER': 'qcds_dev1',
+        'PASSWORD': 'Qdv1_Cdcd#$2023',
         'HOST': '172.16.1.34',
         'PORT': '5432',
     }
