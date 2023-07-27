@@ -3,11 +3,14 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from django.db import connection
 from django.conf import settings
+from decimal import Decimal
 
 import numpy as np
 from configparser import ConfigParser
 from time import time
 from datetime import date
+from datetime import datetime
+from dateutil.relativedelta import relativedelta
 
 import warnings
 warnings.filterwarnings("ignore")
@@ -30,7 +33,6 @@ logging.basicConfig(filename=os.path.join(settings.LOG_DIR, settings.LOG_FILE), 
 def get_payer_allowed_value(row):
 
     allowed = row['Allowed']
-
     try:
         is_na = pd.isnull(allowed)
     except TypeError:
@@ -52,7 +54,8 @@ def get_payer_allowed_value(row):
             except KeyError:
                 service_fee = row['Service_Fee']
                 service_units = row['Service_Units']
-                payor_allowed = float(service_fee) * float(QcdspeConfig.cpt_avg_allowed['allowed_ratio_q3']) * float(service_units)
+                payor_allowed = float(service_fee) * float(QcdspeConfig.cpt_avg_allowed['allowed_ratio_q3']) * \
+                                float(service_units)
 
     return payor_allowed
 
@@ -178,129 +181,298 @@ def get_similar_patient_info(missing_cpts, current_carrier, patient_age, diagnos
 
     return similar_patient_data, null_cpts
 
-
-def get_patient_details(patient_id, allscripts=False):
-
+def get_patient_details(patient_id,allscripts=False):
+    """ function for fetching patient details from database"""
     cursor = connection.cursor()
 
     if not allscripts:
 
         # cdm_cols
         column_names = [
-            'Patient_ID',
-            'DoB',
-            "Proc_Category_Abbr",
-            'patient_zip_code',
-            'patient_sex',
-            "Original_Carrier_Name",
-            'Patient_City',
-            'Patient_State',
-            'CoPayment',
-            'CoInsurance',
-            "Primary_Diagnosis_Code",
-            "Procedure_Code",
-            "Service_Units",
-            "Service_Fee",
-            "Allowed",
-            "Deductible"
+            'visit_detail_id',
+            'person_id',
+            'pm_patient_number',
+            'birth_datetime',
+            'location_source_value',
+            'procedure_category_abbr',
+            'type_of_service_abbr',
+            'zip',
+            'gender_source_value',
+            'payer_source_value',
+            'city',
+            'state',
+            'paid_patient_copay',
+            'paid_patient_coinsurance',
+            'condition_source_value',
+            'procedure_source_value',
+            'quantity',
+            'visit_detail_start_datetime',
+            'preceding_visit_detail_id',
+            'original_billing_date',
+            'date_paid',
+            'total_charge',
+            'total_paid',
+            'amount_allowed',
+            'paid_patient_deductible',
+            'transaction_type',
+            'abbrevation',
+            'self_pay_trans_cde'
         ]
 
         # cdm query
-        query = """SELECT T1.person_id,T1.birth_datetime,
-        t3.procedure_category_abbr,  loc.zip, t1.gender_source_value, t6.payer_source_value,loc.city,
-        loc.state, t5.paid_patient_copay, t5.paid_patient_coinsurance,t4.condition_source_value,t3.procedure_source_value,
-        T3.quantity, t5.total_charge,t5.amount_allowed, t5.paid_patient_deductible
-        From cdm.location AS loc 
-        LEFT JOIN cdm.person AS T1 ON loc.location_id =T1.location_id 
-        LEFT JOIN cdm.visit_detail AS T2 ON T1.person_id = T2.person_id
-        LEFT join cdm.procedure_occurrence as T3 ON T2.visit_detail_id= T3.visit_detail_id
-        left join cdm.condition_occurrence as T4 on T2.visit_detail_id = T4.visit_detail_id
-        left join cdm.cost as T5 on T2.visit_detail_id =T5.cost_event_id 
-        left join cdm.payer_plan_period as T6 on T1.person_id = T6.person_id
-        --left join cdm.provider as T7 on T2.provider_id = T7.provider_id
-        --left join cdm.location as T8 on t1.Location_id = t8. Location_id
-        --left join cdm.care_site as T9 on t8.Location_id = t9. Location_id
-        LEFT JOIN cdm.p_ref_transaction_codes as T10 on t5.transaction_code_abbr = T10.abbrevation
-        where (t10.self_pay_trans_cde=0)
-        and (T10.Description not like '%%Self%%' And T10.Description not like '%%Adj%%')
-        And (t10.transaction_type!='A') and (t10.transaction_type !='T') and (t10.transaction_type!='B')
-        and (T2.visit_detail_id > 0)  and ( t5.total_paid >= 0) and (t5.total_charge > 0)
-        and ((T4.condition_source_value BETWEEN 'E08' AND 'E13')
-            OR (T4.condition_source_value = 'R73.03'))
-        and t1.person_id= %s """
+        query = """select T2.visit_detail_id, T1.person_id, t1.pm_patient_number,  t1.birth_datetime,
+                T8.location_source_value,t3.procedure_category_abbr,t3.type_of_service_abbr, 
+                T8.zip, t1.gender_source_value, t6.payer_source_value,T8.city,T8.state, 
+                t5.paid_patient_copay, t5.paid_patient_coinsurance,t4.condition_source_value,
+                t3.procedure_source_value,T3.quantity,  T2.visit_detail_start_datetime, t2.preceding_visit_detail_id,
+                t2.original_billing_date,
+                t5.date_paid , t5.total_charge, t5.total_paid,t5.amount_allowed, t5.paid_patient_deductible, 
+                t10.transaction_type,t10.abbrevation,
+                T10.self_pay_trans_cde from cdm.person AS T1 LEFT JOIN cdm.visit_detail AS T2 ON 
+                T1.person_id = T2.person_id   
+                LEFT join cdm.procedure_occurrence as T3 ON T2.visit_detail_id= T3.visit_detail_id    
+                left join cdm.condition_occurrence as T4 on T2.visit_detail_id = T4.visit_detail_id   
+                left join cdm.cost as T5 on T2.visit_detail_id =T5.cost_event_id       
+                LEFT JOIN cdm.p_ref_transaction_codes as T10 on t5.transaction_code_abbr = T10.abbrevation  
+                left join cdm.payer_plan_period as T6 on T1.person_id = T6.person_id   
+                left join cdm.care_site as T7 on T1.care_site_id =T7.care_site_id  
+                left join cdm.location as T8 on T8.location_id =t7.location_id where
+                ((t4.condition_source_value BETWEEN 'E08' AND 'E13') OR (t4.condition_source_value = 'R73.03') OR
+                (t4.condition_source_value BETWEEN 'E66.0' AND 'E66.99') OR 
+                (t4.condition_source_value BETWEEN 'I10' AND 'I16')
+                OR (t4.condition_source_value BETWEEN 'I25.00' AND 'I25.99')) And (t10.transaction_type!='A') and 
+                (t10.transaction_type !='T') and (t10.transaction_type!='B')
+                and  (t5.total_paid >= 0) and (t5.total_charge > 0) and
+                t1.person_id= %s """
 
     else:
         # allscripts cols
-        column_names = ["Service_ID", "Patient_ID", "Patient_Number", "IMREDEM_CODE", "patient_age",
+        column_names = ["Service_ID", "Patient_ID", "Patient_Number", "patient_age",
                         "Actual_Dr_Name", "Place_of_Service_Abbr", "Proc_Category_Abbr",
+                        "Original_Carrier_Category_Abbr","Patient_Marital_Status",
                         "Type_of_Service_Abbr","patient_zip_code", "patient_sex", "Original_Carrier_Name",
                         "Patient_City", "Patient_State", "CoPayment", "CoInsurance", "Primary_Diagnosis_Code",
                         "Procedure_Code", "Service_Units", "Service_Date_From", "Claim_Number",
                         "Original_Billing_Date", "Date_Paid", "Service_Fee", "Amount", "Allowed", "Deductible",
-                        "Transaction_Type", "Abbreviation", "Description", "Self_Pay_TranCode"]
+                        "Transaction_Type", "Abbreviation", "Description", "Self_Pay_TranCode","Patient_Date_Reg",
+                        "Reimbursement_Comment_Abbr","Denied"]
         # allscripts query
         query = """
-                Select t1.Service_ID,t1.Patient_ID,t1.Patient_Number,d.IMREDEM_CODE,t5.patient_age,
-                t1.Actual_Dr_Name,t1.Place_of_Service_Abbr,t1.Proc_Category_Abbr,t1.Type_of_Service_Abbr,
-                t5.patient_zip_code,t5.patient_sex,t1.Original_Carrier_Name, t5.Patient_City, t5.Patient_State,
-                t2.CoPayment,t2.CoInsurance,t1.Primary_Diagnosis_Code,t1.Procedure_Code,t1.Service_Units,
-                convert(Date,t1.Service_Date_From) as Service_Date_From, t1.Claim_Number,
-                convert(Date, t1.Original_Billing_Date) as Original_Billing_Date,Convert(Date, t2.Date_Paid) as Date_Paid,
-                t1.Service_Fee,t2.Amount, t2.Allowed, t2.Deductible, t2.Transaction_Type, t4.Abbreviation,
-                t4.Description, t4.Self_Pay_TranCode
-                from PM.vwGenSvcInfo as t1
-                left join PM.[vwGenSvcPmtInfo] t2 ON t1.Service_Id=t2.Service_Id
-                left join PM.Reimbursement_Detail t3 on t1.Service_Id=t3.Service_Id
-                left join [dbo].[vUAI_Transaction_Codes] t4 ON t2.Transaction_Code_Abbr=t4.Abbreviation
-                left join [EMR].[HPSITE].[DEMOGRAPHICS_VIEW] as d on t1.Patient_Number = d.DEM_EXTERNALID
-                left join PM.vwGenPatInfo as t5 ON T1.Patient_Number=T5.Patient_Number
-                where t1.Service_Date_From > '2017-01-01' and t4.Self_Pay_TranCode=0 and
-                (t2.Transaction_Type !='A') and (t2.Transaction_Type !='T') and (t2.Transaction_Type !='B')
-                and (t1.Service_Fee > 0) and (t2.Amount >0) and
-                ((t1.Primary_Diagnosis_Code between 'E08' and 'E13') OR
-                (t1.Primary_Diagnosis_Code='R73.03')) and t1.Patient_ID= %s """
+                SELECT t1.Service_ID, t1.Patient_ID, t1.Patient_Number, t5.patient_age, t1.Actual_Dr_Name, 
+                t1.Place_of_Service_Abbr,
+                t1.Proc_Category_Abbr, t1.Original_Carrier_Category_Abbr, t5.Patient_Marital_Status, 
+                t1.Type_of_Service_Abbr,
+                t5.patient_zip_code, t5.patient_sex, t1.Original_Carrier_Name, t5.Patient_City, t5.Patient_State, 
+                t2.CoPayment,
+                t2.CoInsurance, t1.Primary_Diagnosis_Code, t1.Procedure_Code, t1.Service_Units, 
+                CONVERT(Date,t1.Service_Date_From)
+                AS Service_Date_From, t1.Claim_Number, CONVERT(Date, t1.Original_Billing_Date) AS Original_Billing_Date,
+                CONVERT(Date, t2.Date_Paid) AS Date_Paid, t1.Service_Fee, t2.Amount, t2.Allowed, t2.Deductible,
+                t2.Transaction_Type, t4.Abbreviation, t4.Description, t4.Self_Pay_TranCode, 
+                CONVERT(Date,t5.Patient_Date_Reg)
+                AS Patient_Date_Reg, t2.Reimbursement_Comment_Abbr, t3.Denied
+                FROM PM.vwGenSvcInfo AS T1
+                LEFT JOIN PM.[vwGenSvcPmtInfo] T2 ON T1.Service_Id=T2.Service_Id
+                LEFT JOIN PM.Reimbursement_Detail T3 ON T1.Service_Id=T3.Service_Id
+                LEFT JOIN [dbo].[vUAI_Transaction_Codes] T4 ON T2.Transaction_Code_Abbr=T4.Abbreviation
+                LEFT JOIN [EMR].[HPSITE].[DEMOGRAPHICS_VIEW] AS d ON t1.Patient_Number = d.DEM_EXTERNALID
+                LEFT JOIN PM.vwGenPatInfo AS T5 ON T1.Patient_Number=T5.Patient_Number
+                WHERE (T2.Transaction_Type != 'A') AND (T2.Transaction_Type != 'T') AND (T2.Transaction_Type != 'B') AND
+                (T1.Service_Fee > 0) AND (t2.Amount >= 0) AND
+                ((t1.Primary_Diagnosis_Code BETWEEN 'E08' AND 'E13') OR (t1.Primary_Diagnosis_Code = 'R73.03') OR
+                (t1.Primary_Diagnosis_Code BETWEEN 'E66.0' AND 'E66.99') OR (t1.Primary_Diagnosis_Code BETWEEN 
+                'I10' AND 'I16') OR
+                (t1.Primary_Diagnosis_Code BETWEEN 'I25.00' AND 'I25.99')) AND t2.Date_Paid >= DATEADD(day, -455, 
+                GETDATE())
+                AND t1.Service_Date_From BETWEEN DATEADD(month, -15, GETDATE()) AND DATEADD(month, -3, GETDATE())
+                AND t1.Patient_ID = %s
+            """
 
-    cursor.execute(query, (patient_id,))
-
+    cursor.execute(query,(patient_id,))
     db_response = cursor.fetchall()
 
     result_df = pd.DataFrame([list(elem) for elem in db_response])
     cursor.close()
-
     if result_df.empty:
         result_df = pd.DataFrame()
 
     else:
         result_df.columns = column_names
+        result_df = result_df.loc[:, ~result_df.columns.duplicated()]
+        # Change column name w.r.t training Data
 
+        new_column_names = {
+            'visit_detail_id': 'Service_ID',
+            'person_id': 'Patient_ID',
+            'pm_patient_number': 'Patient_Number',
+            'birth_datetime': 'DoB',
+            'provider_name': 'Actual_Dr_Name',
+            'location_source_value': 'Place_of_Service_Abbr',
+            'procedure_category_abbr': 'Proc_Category_Abbr',
+            # 'Patient_Marital_Status':'Patient_Marital_Status',
+            'type_of_service_abbr': 'Type_of_Service_Abbr',
+            'zip': 'patient_zip_code',
+            'gender_source_value': 'patient_sex',
+            'payer_source_value': 'Original_Carrier_Name',
+            'city': 'Patient_City',
+            'state': 'Patient_State',
+            'paid_patient_copay': 'CoPayment',
+            'paid_patient_coinsurance': 'CoInsurance',
+            'condition_source_value': 'Primary_Diagnosis_Code',
+            'procedure_source_value': 'Procedure_Code',
+            'quantity': 'Service_Units',
+            'visit_detail_start_datetime': 'Service_Date_From',
+            # 'preceding_visit_detail_id':'',
+            'original_billing_date': 'Original_Billing_Date',
+            'date_paid': 'Date_Paid',
+            'total_charge': 'Service_Fee',
+            'total_paid': 'Amount',
+            'amount_allowed': 'Allowed',
+            'paid_patient_deductible': 'Deductible',
+            'transaction_type': 'Transaction_Type',
+            'abbrevation': 'Abbreviation',
+            'self_pay_trans_cde': 'Self_Pay_TranCode',
+            # 'Patient_Date_Reg':'',
+            # 'revenue_code_source_value':'',
+            # 'modifier_concept_id':''
+        }
+        result_df.rename(columns=new_column_names, inplace=True)
     return result_df
 
+def handle_empty_patient_data(patient_id, primary_diag_code,rule_engine_recommended_code, start_time):
+    """function for handling empty patient data in database"""
 
-def handle_empty_patient_data(patient_id, rule_engine_recommended_code, start_time):
-
-    pred_scores = [1.0] * len(rule_engine_recommended_code)
+    pred_scores = [0.999] * len(rule_engine_recommended_code)
     proc_code = dict(zip(rule_engine_recommended_code,pred_scores))
-    rec = {str(patient_id): {"Proc_code":proc_code}}
+    icd_sorted_output = {}
+    icd_sorted_output['ICD'] = primary_diag_code
+    icd_sorted_output['Proc_code'] = proc_code
 
-    response = {
-        "message": "Prediction Engine Service completed successfully.",
-        "status": "Success",
-        "statusCode": 200,
-        "respTime": round((time() - start_time), 3),
-        "patiend_id": str(patient_id),
-        "recommended_code": str(rec)
-    }
-
-    return response
-
+    return icd_sorted_output
 
 def get_age(dob):
+    """function to return actual age"""
     today = date.today()
     years = today.year - dob.year
     if today.month < dob.month or (today.month == dob.month and today.day < dob.day):
         years -= 1
     return years
 
+def q3(x):
+    """function to return 3rd quartile"""
+    return x.quantile(0.75)
+
+# function for calculating the payout_ratio
+def get_payout_ratio(row,cpt_payment_dict):
+    cpt = row['Procedure_Code']
+    payor = row['Original_Carrier_Name']
+    amt = row['Amount_per_serv_unit']
+    med_payout = cpt_payment_dict[payor, str(cpt)]
+
+    if med_payout == 0:
+        if amt > med_payout:
+            payout_ratio = 1
+        else:
+            payout_ratio = 0
+    else:
+        if amt > med_payout:
+            amt = med_payout
+
+        payout_ratio = amt / med_payout
+
+    return payout_ratio
+
+
+def get_delay(row):
+    date_paid = row['Date_Paid']
+    billing_date = row['Original_Billing_Date']
+
+    diff = (date_paid - billing_date).days
+
+    amt = row["Amount"]
+
+    if amt == 0:
+        return 0
+    else:
+        return diff
+
+def onehot_encoding_sex(row):
+    pat_sex=row['patient_sex']
+    pat_sex_conv=QcdspeConfig.patient_sex[pat_sex]
+    return pat_sex_conv
+
+def onehot_encoding_marital_status(row):
+    pat_marital=row['Patient_Marital_Status']
+    pat_marital_conv=QcdspeConfig.patient_marital_status[pat_marital]
+    return pat_marital_conv
+
+def update_procedure_count(row):
+    cpt = row['Procedure_Code']
+    cpt_count = QcdspeConfig.cpt_count_dic[str(cpt)]
+    return cpt_count
+
+def update_cpt_diag_count(row):
+    cpt = row['Procedure_Code']
+    cpt_diag_count = QcdspeConfig.cpt_diagnosis_dic[str(cpt)]
+    return cpt_diag_count
+
+# Function for identifying the average amount w.r.t procedure_code
+def update_cpt_average_amount(row):
+    cpt = row['Procedure_Code']
+    cpt_avg_amount = QcdspeConfig.cpt_avg_amount_dic[str(cpt)]
+    return cpt_avg_amount
+
+# Function for check whether Procedure_Code belongs to top denied list or not
+def top_denied_cpt_update(row):
+    cpt=row['Procedure_Code']
+    top_denied_cpt_list = QcdspeConfig.top_denied_cpt
+    if cpt in top_denied_cpt_list:
+        return 1
+    else:
+        return 0
+
+# Function for check whether Original_Carrier_Name in top denied payer list or not
+def top_denied_payer_update(row):
+    payer = row['Original_Carrier_Name']
+    top_denied_payer_list = QcdspeConfig.top_denied_payer
+    if payer.strip() in top_denied_payer_list:
+        return 1
+    else:
+        return 0
+
+# Function to determine marital status based on age
+def get_marital_status(age):
+    return 'Married' if age > 30 else 'Single'
+
+def reimbursement_comment_count(df):
+    remburse_json=QcdspeConfig.reim_comment_count
+    df_proc_list=list(df.Procedure_Code)
+    keys=remburse_json[1].keys()
+    reim_df = pd.DataFrame(columns=keys)
+    for reim_dic in remburse_json:
+        for proc in df_proc_list:
+            if reim_dic['Procedure_Code'] == proc:
+                reim_values=list(reim_dic.values())
+                reim_df.loc[len(reim_df)] = reim_values
+
+    return reim_df
+
+def get_normed_delay(row,cpt_delay_dict):
+    cpt = row['Procedure_Code']
+    payor = row['Original_Carrier_Name']
+    amt = row['Amount']
+    delay = row['delay_in_days']
+    max_delay = cpt_delay_dict[payor, str(cpt)]
+
+    if amt == 0:
+        delay_normed = 0
+    else:
+        try:
+            delay_normed = 1 - (delay / max_delay)
+        except ZeroDivisionError:
+            delay_normed = 0
+
+    return delay_normed
 
 class PredictScore(APIView):
 
@@ -316,141 +488,201 @@ class PredictScore(APIView):
 
         patient_id = request_data['Patient_ID']
 
-        rec_cpt_dict = request_data['Rule_Engine_Recommended_Code']
-        rec_cpts = [k for k, v in rec_cpt_dict.items() if int(v) == 1]
+        rec_cpt_list = request_data['recommendation']
 
-        self.logger.info("Predict Procedure Started for: " + str(patient_id))
-        X = get_patient_details(patient_id, allscripts)
-        self.logger.info("patient Data fetched")
+        cpts_diagnosis=[]
+        for rec_cpt_dic in rec_cpt_list:
+            primary_diag_code=rec_cpt_dic['ICD']
+            rec_cpts = rec_cpt_dic['CPT']
+            self.logger.info("Predict Procedure Started for: " + str(patient_id))
+            X = get_patient_details(patient_id,allscripts)
+            self.logger.info("patient Data fetched")
+            if X.shape[0] == 0:
+                patient_empty_out = handle_empty_patient_data(patient_id,primary_diag_code,rec_cpts, start)
+                cpts_diagnosis.append(patient_empty_out)
+                end = time()
+                continue
+            else:
+                X = X.drop_duplicates()
+                X = X[X.Procedure_Code.isin(rec_cpts)]
+                # Check whether cpt appears first time or not
+                if X.shape[0] == 0:
+                    cpt_output = handle_empty_patient_data(patient_id, primary_diag_code, rec_cpts, start)
+                    self.logger.info("None of the recommneded CPTs in patient history. "
+                                     "Returning all ones as scores")
+                    cpts_diagnosis.append(cpt_output)
+                    end = time()
+                    continue
+                else:
+            # calculate patient age based on DoB
+                    if 'patient_age' not in X.columns:
+                        X['DoB'] = pd.to_datetime(X['DoB'])
+                        #X['patient_age'] = get_age(X['DoB'])
+                        X['patient_age'] = X['DoB'].apply(lambda x: relativedelta(datetime.now(), x).years)
 
-        if X.shape[0] == 0:
-            response = handle_empty_patient_data(patient_id, rec_cpts, start)
-            self.logger.info("patient Data empty. Returning all ones as scores for recommended CPTs")
-            return Response(response)
+            # Identify Patient Marital Status
 
-        X = X.drop_duplicates()
-        # Missing value treatment
-        # For replacing missing payer values with most frequent payer in the past one year
-        X['Original_Carrier_Name'] = X.Original_Carrier_Name.fillna(QcdspeConfig.most_frequent_payer)
-        # Filling coinsurance, copay and deductible with zeros
-        X['CoInsurance'] = X.CoInsurance.fillna(0)
-        X['CoPayment'] = X.CoPayment.fillna(0)
-        X['Deductible'] = X.Deductible.fillna(0)
-        # Replacing allowed value with information from past data
-        X['Allowed'] = X.apply(get_payer_allowed_value, axis=1)
+                    if 'Patient_Marital_Status' not in X.columns:
+                        X['Patient_Marital_Status'] = X['patient_age'].apply(get_marital_status)
+            # Missing value treatment
+            # For replacing missing payer values with most frequent payer in the past one year
+                    X['Original_Carrier_Name'] = X.Original_Carrier_Name.fillna(QcdspeConfig.most_frequent_payer)
+            # Filling coinsurance, copay and deductible with zeros
+                    X['CoInsurance'] = X.CoInsurance.fillna(0)
+                    X['CoPayment'] = X.CoPayment.fillna(0)
+                    X['Deductible'] = X.Deductible.fillna(0)
+                    X['Service_Fee'] = X.Service_Fee.fillna(0)
+            # Replacing allowed value with information from past data
+                    X['Allowed'] = X.apply(get_payer_allowed_value, axis=1)
+            # # Patient Marital Status Null Value Imputation#####
+            #         X.loc[(X['patient_age'] < 30) & (
+            #             X['Patient_Marital_Status'].isnull()), 'Patient_Marital_Status'] = 'Single'
+            #         X.loc[(X['patient_age'] >= 30) & (
+            #             X['Patient_Marital_Status'].isnull()), 'Patient_Marital_Status'] = 'Married'
 
-        # calculate patient age based on DoB
-        if 'patient_age' not in X.columns:
-            X['DoB'] = pd.to_datetime(X['DoB'])
-            X['patient_age'] = get_age(X['DoB'][0])
+            # New Aggregates related to Patient Profile
+                    X['Service_Date_From'] = pd.to_datetime(X['Service_Date_From'])
+            # frequency of procedure code for last one year
+                    X_freq=X.groupby(['Patient_Number', 'Procedure_Code']).size().reset_index(name='patient_procedure_freq')
+                    X=X.merge(X_freq)
+            # Frequency of Medical Consultantion for last One year
+                    X_med_freq = X.groupby(['Patient_Number']).size().reset_index(name='medical_consultation_freq')
+                    X = X.merge(X_med_freq)
 
-        col_names = [
-            'Original_Carrier_Name',  # *
-            'patient_age',
-            'Proc_Category_Abbr',  # *
-            'patient_zip_code',  # need strategy to handle new zip code category
-            'patient_sex',
-            'Patient_City',
-            'Patient_State',
-            'CoInsurance',  # *
-            'CoPayment',  # *
-            'Procedure_Code',
-            'Allowed',  # *
-            'Deductible'  # *
-        ]
+            # Frequency of cpt for particular patient in a day
 
-        X = X[col_names]
+                    X_freq1 = X.groupby(['Patient_Number', 'Service_Date_From', 'Procedure_Code']).size().reset_index(
+                        name='patient_procedure_freq_day')
+                    X = X.merge(X_freq1)
 
-        X = X[X.Procedure_Code.isin(rec_cpts)]
+            # Medical consultation Frequency for particular patient in a day
+                    X_med_freq1 = X.groupby(['Patient_Number', 'Service_Date_From']).size().reset_index(
+                        name='medical_consultation_freq_day')
+                    X = X.merge(X_med_freq1)
 
-        if X.shape[0] == 0:
-            response = handle_empty_patient_data(patient_id, rec_cpts, start)
-            self.logger.info("None of the recommneded CPTs in patient history. "
-                             "Returning all ones as scores")
-            return Response(response)
+            # Total amount paid for Particular CPT
+                    X_ins_amount = X.groupby(["Patient_Number", "Procedure_Code"], as_index=False).agg({"Amount": 'sum'})
+            # Total copayment paid for a particular CPT over a year
+                    X_copay_amount = X.groupby(["Patient_Number", "Procedure_Code"], as_index=False).agg({"CoPayment": 'sum'})
+                    X_total_amount = X_ins_amount.merge(X_copay_amount)
+                    X_total_amount["patient_total_amount"] = X_total_amount['Amount'] + X_total_amount['CoPayment']
+                    X_total_amount1 = X_total_amount[["Patient_Number", "Procedure_Code", "patient_total_amount"]]
+                    X = X.merge(X_total_amount1)
 
-        cpts_in_patient_history = X.Procedure_Code.unique().tolist()
-        missing_cpts = [cpt for cpt in rec_cpts if cpt not in cpts_in_patient_history]
+            # Amount Spend for one year
+                    X_amount = X.groupby(["Patient_Number"], as_index=False).agg({"Amount": 'sum'})
+                    X_copay = X.groupby(["Patient_Number"], as_index=False).agg({"CoPayment": 'sum'})
+                    X_amount_spend = X_amount.merge(X_copay)
+                    X_amount_spend['Total_Amount_Spend_1year'] = X_amount_spend['Amount'] + X_amount_spend['CoPayment']
+                    X_amount_spend1 = X_amount_spend[['Patient_Number', 'Total_Amount_Spend_1year']]
+                    X = X.merge(X_amount_spend1)
 
-        # mapping to handle cases of payer name changes, acquisitions, and new payers
-        payer_mapping_dict = QcdspeConfig.payer_mapping['payer_mapping']
-        X = X.replace({"Original_Carrier_Name": payer_mapping_dict})
+            # CPT frequency for a particular patient (Num of Visits)
+                    X['Visit_count'] = X.groupby(['Patient_Number', 'Procedure_Code']).cumcount() + 1
+            # Cummulative Score Calculations
+                    X_score=X.copy()
+                    X_score['Allowed']=X_score['Allowed'].astype(float)
+                    X_score['Service_Units']=X_score['Service_Units'].astype(float)
+                    X_score['Allowed_per_serv_unit'] =X_score['Allowed'] / X_score['Service_Units']
+                    X_score['Amount']=X_score['Amount'].astype(float)
+                    X_score['Amount_per_serv_unit'] = X_score['Amount'] / X_score['Service_Units']
+            # finding the q3 for a given cpt by a given payer
+                    cpt_payment_q3 = X_score.groupby(['Original_Carrier_Name', 'Procedure_Code']).agg({'Amount_per_serv_unit': q3})
+                    cpt_payment_dict = cpt_payment_q3.to_dict('dict')['Amount_per_serv_unit']
+            # Applying the function to the 'Amount' column
+                    X_score['payout_ratio'] = X_score[['Procedure_Code', 'Original_Carrier_Name', 'Amount_per_serv_unit']].apply(
+                        lambda row: get_payout_ratio(row, cpt_payment_dict), axis=1)
+                    X_score['payout_ratio'] = X_score['payout_ratio'].round(2)
+                    X_score["Original_Billing_Date"] = pd.to_datetime(X_score["Original_Billing_Date"])
+                    X_score["Date_Paid"] = pd.to_datetime(X_score["Date_Paid"])
+                    X_score['delay_in_days'] = X_score[['Original_Billing_Date', 'Date_Paid', 'Amount']].apply(get_delay, axis=1)
+            # finding the median payment for a given cpt by a given payer
+                    cpt_delay_max = X_score.groupby(['Original_Carrier_Name', 'Procedure_Code'])[['delay_in_days']].max()
+                    cpt_delay_dict = cpt_delay_max.to_dict('dict')['delay_in_days']
+                    X_score['normalized_delay'] = X_score[
+                        ['Procedure_Code', 'Original_Carrier_Name', 'Amount', 'delay_in_days']].apply(
+                        lambda row:get_normed_delay(row,cpt_delay_dict), axis=1)
+            # Final score
+                    payment_wt = 0.75
+                    delay_wt = 0.25
+                    X_score["Score"] = (payment_wt * X_score["payout_ratio"]) + (delay_wt * X_score["normalized_delay"])
+            # Average Score from Cummulative visit
+                    X_score['Cumulative_Score'] = X_score.groupby(['Patient_Number', 'Procedure_Code'])['Score'].cumsum()
+                    X_score['Cumulative_Score'] = X_score['Cumulative_Score'] - X_score['Score']
+                    X_score['Average_Score'] = X_score['Cumulative_Score'] / (X_score['Visit_count'] - 1)
+                    X_score.loc[X_score['Visit_count'] == 1, 'Average_Score'] = 9999
+                    X_score=X_score[['Service_ID','Average_Score']]
+                    X=X.merge(X_score)
+            # cpt count
+                    X['procedure_count'] = X.apply(update_procedure_count,axis=1)
+            # Top Denied Cpt
+                    X['top_denied_cpt'] = X.apply(top_denied_cpt_update, axis=1)
+            # Top Denied Payer
+                    X['top_denied_payer']=X.apply(top_denied_payer_update, axis=1)
 
-        for col in QcdspeConfig.categorical_columns:
-            le = QcdspeConfig.label_encoders[col]
-            try:
-                X[col] = le.transform(X[col])
-            except ValueError:
-                # Some variables having trailing spaces in train set but not at prediction time.
-                col_classes = X[col].unique().tolist()
-                le_classes = le.classes_.tolist()
-                missing_classes = [lbl for lbl in col_classes if lbl not in le_classes]
-                missing_indx_dict = {}
-                le_dict = {i: idx for idx, i in enumerate(le_classes)}
+            # reimbursement comment count
+                    X_new=reimbursement_comment_count(X)
+                    X = X.merge(X_new)
+            # dignosis count w.r.t cpt
+                    X['diagnosis_count']=X.apply(update_cpt_diag_count,axis=1)
+            # Average amount
+                    X['Average_Amount'] = X.apply(update_cpt_average_amount,axis=1)
 
-                classes_to_replace = []
-                for missing_cls in missing_classes:
+            # One hot encoding
 
-                    missing_cls_trimmed = missing_cls.strip()
-                    indx = None
+                    X['patient_sex']=X.apply(onehot_encoding_sex, axis=1)
+                    X['Patient_Marital_Status']=X.apply(onehot_encoding_marital_status, axis=1)
 
-                    if missing_cls_trimmed in le_classes:
-                        indx = le_classes.index(missing_cls_trimmed)
-                    else:
-                        le_classes_trimmed = [i.strip() for i in le_classes]
-                        if missing_cls_trimmed in le_classes_trimmed:
-                            indx = le_classes_trimmed.index(missing_cls_trimmed)
-                    if indx:
-                        missing_indx_dict[missing_cls] = indx
-                    elif not indx:
-                        classes_to_replace.append(missing_cls)
+                   # categorical_col=QcdspeConfig.categorical_cols_list
 
-                le_dict.update(missing_indx_dict)
+            # Filter Dataframe with ICD
+                    X['Primary_Diagnosis_Code'] = X['Primary_Diagnosis_Code'].str.strip()
+                    primary_diag_code = primary_diag_code.strip()
+                    X_diag = X[X['Primary_Diagnosis_Code'] == primary_diag_code]
+        # Check whether ICD is first time or not
+                    if X_diag.shape[0] != 0:
+                        X = X_diag
+                    cpts_in_patient_history = X.Procedure_Code.unique().tolist()
+                    missing_cpts = [cpt for cpt in rec_cpts if cpt not in cpts_in_patient_history]
 
-                if classes_to_replace:
-                    self.logger.warning("New payer names found, which are not present at training time")
-                    self.logger.info("Missing classes in payer column are:")
-                    for c, missing_payer in enumerate(classes_to_replace):
-                        self.logger.info("---->{}: {}".format(c+1,missing_payer))
-                    frequent_payer_index = le_classes.index(QcdspeConfig.most_frequent_payer)
-                    replace_missing_dict = dict(zip(classes_to_replace,[frequent_payer_index]*len(classes_to_replace)))
-                    le_dict.update(replace_missing_dict)
-
-                X[col] = [le_dict[label] for label in X[col]]
+         # mapping to handle cases of payer name changes, acquisitions, and new payers
+                    payer_mapping_dict = QcdspeConfig.payer_mapping['payer_mapping']
+                    X = X.replace({"Original_Carrier_Name": payer_mapping_dict})
 
         # Reorder input columns in line with their order at training time
-        X = X[QcdspeConfig.model_fit_feature_order]
+                    X = X[QcdspeConfig.cat_model_fit_feature_order]
 
-        input_cpts = X.Procedure_Code.tolist()
-        cpt_encoder = QcdspeConfig.label_encoders["Procedure_Code"]
-        input_cpts = cpt_encoder.inverse_transform(input_cpts)
+                    input_cpts = X.Procedure_Code.tolist()
 
-        self.logger.info("pre processing complete")
+                    self.logger.info("pre processing complete")
+        # Model Prediction
+                    predictions = QcdspeConfig.cat_model.predict(X)
+                    self.logger.info("ml prediction complete")
+                    predictions_list = np.round(predictions, 3).tolist()
+                    output = dict(zip(input_cpts, predictions_list))
 
-        predictions = QcdspeConfig.model.predict(X)
-        self.logger.info("ml prediction complete")
+         # One score to CPTs missing in patient history
+                    self.logger.info("Some of the recommended CPTs in patient history.")
+                    self.logger.info("Missing CPTs are:")
+                    self.logger.info(missing_cpts)
+                    self.logger.info("Returning all ones as scores for these CPTs")
 
-        predictions_list = np.round(predictions, 3).tolist()
-        output = dict(zip(input_cpts, predictions_list))
+                    output.update(dict(zip(missing_cpts, [0.999]*len(missing_cpts))))
 
-        # One score to CPTs missing in patient history
-        self.logger.info("Some of the recommended CPTs in patient history.")
-        self.logger.info("Missing CPTs are:")
-        self.logger.info(missing_cpts)
-        self.logger.info("Returning all ones as scores for these CPTs")
+                    sorted_output = dict(sorted(output.items(), key=lambda x: x[1], reverse=True))
+                    icd_sorted_output={}
+                    icd_sorted_output['ICD'] = primary_diag_code
+                    icd_sorted_output['Proc_code'] = sorted_output
+                    cpts_diagnosis.append(icd_sorted_output)
 
-        output.update(dict(zip(missing_cpts, [1.0]*len(missing_cpts))))
-
-        sorted_output = dict(sorted(output.items(), key=lambda x: x[1], reverse=True))
-        end = time()
-        rec = {str(patient_id): {"Proc_code":sorted_output}}
+            end = time()
         response = {
             "message": "Prediction Engine Service completed successfully.",
             "status": "Success",
             "statusCode": 200,
             "respTime": round(end-start, 3),
             "patient_id": str(patient_id),
-            "recommended_code": str(rec)
+            "recommended_code": str(cpts_diagnosis)
         }
 
         return Response(response)

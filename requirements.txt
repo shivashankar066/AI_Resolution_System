@@ -9,6 +9,7 @@ python-dateutil==2.8.2
 scikit-learn==1.1.1
 openpyxl==3.0.10
 psycopg2==2.9.6
+catboost==1.0.6
 
 
 

@@ -84,17 +84,17 @@ WSGI_APPLICATION = 'PredictionEngine.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/4.0/ref/settings/#databases
 
-DATABASES = {
-    "default": {
-        "ENGINE": "mssql",
-        "NAME": "Ntier_EPIC",
-        "USER": "Sisenseuser",
-        "PASSWORD": "!w@ntd@t@#123",
-        "HOST": "10.0.1.40",
-        "PORT": "1433",
-        "OPTIONS": {"driver": "ODBC Driver 17 for SQL Server", },
-    },
-}
+# DATABASES = {
+#     "default": {
+#         "ENGINE": "mssql",
+#         "NAME": "Ntier_EPIC",
+#         "USER": "Sisenseuser",
+#         "PASSWORD": "!w@ntd@t@#123",
+#         "HOST": "10.0.1.40",
+#         "PORT": "1433",
+#         "OPTIONS": {"driver": "ODBC Driver 17 for SQL Server", },
+#     },
+# }
 
 DATABASES = {
     'default': {
@@ -105,6 +105,15 @@ DATABASES = {
         'HOST': '172.16.1.34',
         'PORT': '5432',
     }
+    # "default": {
+    #         "ENGINE": "mssql",
+    #         "NAME": "Ntier_EPIC",
+    #         "USER": "Sisenseuser",
+    #         "PASSWORD": "!w@ntd@t@#123",
+    #         "HOST": "10.0.1.40",
+    #         "PORT": "1433",
+    #         "OPTIONS": {"driver": "ODBC Driver 17 for SQL Server",},
+    #     }
 }
 
 # Password validation
