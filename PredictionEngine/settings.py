@@ -99,9 +99,9 @@ WSGI_APPLICATION = 'PredictionEngine.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'qcds_mart',
-        'USER': 'qcds_dev1',
-        'PASSWORD': 'Qdv1_Cdcd#$2023',
+        'NAME': 'qcds_mart_qa',
+        'USER': 'qcds_qa1',
+        'PASSWORD': 'Qu@d!$2023q',
         'HOST': '172.16.1.34',
         'PORT': '5432',
     }

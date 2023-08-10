@@ -474,6 +474,85 @@ def get_normed_delay(row,cpt_delay_dict):
 
     return delay_normed
 
+
+def find_conflict_cpts(rec_cpt_list):
+    """
+    identify the CPTs that are tagged to more than one ICD
+    input to this function is the recommendation from the rule engine output.
+    returns a dictionary in {cpt:[icds]} format
+    """
+    reps = {}
+
+    for icd_dict in rec_cpt_list:
+
+        icd = icd_dict['ICD']
+        proc_list = icd_dict['CPT']
+
+        for cpt in proc_list:
+
+            try:
+                reps[cpt].append(icd)
+            except KeyError:
+                reps[cpt] = [icd]
+
+    reps = {k: v for k, v in reps.items() if len(v) > 1}
+
+    return reps
+
+
+def conflict_resolution(cpts_diagnosis, conflict_cpts):
+    # for each of the CPTs in the conflict_cpts identify the ICD that has maximum score
+
+    cpts_max_scores = {}
+    cpts_max_icds = {}
+
+    # same score for both cpt
+    icd_list = [entry['ICD'] for entry in cpts_diagnosis]
+    print(icd_list)
+    # iterate through the model predictions dictionary and store the ICD that has max score
+    for icd_dict in cpts_diagnosis:
+        icd = icd_dict['ICD']
+        cpt_score_dict = icd_dict["Proc_code"]
+
+        for cpt, score in cpt_score_dict.items():
+            if cpt in conflict_cpts.keys():
+                try:
+                    #else:
+                    existing_score = cpts_max_scores[cpt]
+                    if existing_score < score:
+                        cpts_max_scores[cpt] = score
+                    # store the ICD that yas the best score till now
+                        cpts_max_icds[cpt] = icd
+
+                except KeyError:
+                    cpts_max_scores[cpt] = score
+                    cpts_max_icds[cpt] = icd
+
+    new_output = []
+    # iterate over the model predictions dictionary again
+    # to remove the CPT from the ICD dict, if the ICD is not in the cpts_max_icds dict.
+    for icd_dict in cpts_diagnosis:
+        icd = icd_dict['ICD']
+        cpt_dict = icd_dict['Proc_code'].copy()
+        cpts = cpt_dict.keys()
+
+        for cpt in conflict_cpts.keys():
+            # check if the conflict cpt is there in the ICD dict. if not, no need to check futher
+            if cpt in cpts:
+                # if conflict cpt in the ICD dict, check if the ICD is the same as the one in the cpts_max_icds dict.
+                # If it is, then that means the CPT in this dict is with the highest score, so we retain it here.
+                if icd == cpts_max_icds[cpt]:
+                    continue
+                else:
+                    # If the ICD is different, that means this is not the max score for the cpt.
+                    # we need to remove the CPT from this dictionary
+                    cpt_dict.pop(cpt)
+
+        new_dict = {"ICD": icd, "Proc_code": cpt_dict}
+        new_output.append(new_dict)
+
+    return new_output
+
 class PredictScore(APIView):
 
     def __init__(self):
@@ -489,6 +568,10 @@ class PredictScore(APIView):
         patient_id = request_data['Patient_ID']
 
         rec_cpt_list = request_data['recommendation']
+
+    # Identify conflict cpt and Icd combination #
+        conflict_cpts = find_conflict_cpts(rec_cpt_list)
+        #print(conflict_cpts)
 
         cpts_diagnosis=[]
         for rec_cpt_dic in rec_cpt_list:
@@ -507,6 +590,7 @@ class PredictScore(APIView):
                 X = X[X.Procedure_Code.isin(rec_cpts)]
                 # Check whether cpt appears first time or not
                 if X.shape[0] == 0:
+                    print("Entered here")
                     cpt_output = handle_empty_patient_data(patient_id, primary_diag_code, rec_cpts, start)
                     self.logger.info("None of the recommneded CPTs in patient history. "
                                      "Returning all ones as scores")
@@ -653,10 +737,10 @@ class PredictScore(APIView):
                     X = X[QcdspeConfig.cat_model_fit_feature_order]
 
                     input_cpts = X.Procedure_Code.tolist()
-
                     self.logger.info("pre processing complete")
+                    predict_data = X
         # Model Prediction
-                    predictions = QcdspeConfig.cat_model.predict(X)
+                    predictions = QcdspeConfig.cat_model.predict(predict_data)
                     self.logger.info("ml prediction complete")
                     predictions_list = np.round(predictions, 3).tolist()
                     output = dict(zip(input_cpts, predictions_list))
@@ -674,15 +758,18 @@ class PredictScore(APIView):
                     icd_sorted_output['ICD'] = primary_diag_code
                     icd_sorted_output['Proc_code'] = sorted_output
                     cpts_diagnosis.append(icd_sorted_output)
-
-            end = time()
+            #print(cpts_diagnosis)
+        CRE_recommendation = conflict_resolution(cpts_diagnosis, conflict_cpts)
+            #print(CRE_recommendation)
+        end = time()
         response = {
             "message": "Prediction Engine Service completed successfully.",
             "status": "Success",
             "statusCode": 200,
             "respTime": round(end-start, 3),
             "patient_id": str(patient_id),
-            "recommended_code": str(cpts_diagnosis)
+            "intermediate_recommended_code": str(cpts_diagnosis),
+            "recommended_code": str(CRE_recommendation)
         }
 
         return Response(response)
