@@ -1,6 +1,6 @@
 # Introduction 
 TODO: Give a short introduction of your project. Let this section explain the objectives or the motivation behind this project. 
-Model Pickle file link: https://quadratyx.sharepoint.com/:f:/s/HealthCareProduct-CDCDSS/ElAhc3dG7ytHhz3Mmy6QvxwBJf3oDJ7PF5n7Un_C0x4XbQ?e=jJ2qYF
+Model Pickle file link: https://quadratyx.sharepoint.com/:f:/s/HealthCareProduct-CDCDSS/EkQ-ogZspkRJjKJT_MlAszsB54MfXO4VYOmdpQKYXhgrpw?e=S2qczZ
 
 # Installation
 Clone the repository to your local machine: 
@@ -14,6 +14,4 @@ Clone the repository to your local machine:
     Save pickle files in ./qcdsPE/config/
 ## Start the development server:
     python manage.py runserver
-# License
-The Prediction Engine is open-source and licensed under the MIT License. Feel free to use and modify the code as per the terms of the license.
 
